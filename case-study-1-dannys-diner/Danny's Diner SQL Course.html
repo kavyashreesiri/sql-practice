@@ -1,0 +1,934 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Danny's Diner SQL Course</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<style>
+/* Layout: two-column course. Day map rail on the left, lesson column on the right; the rail becomes a horizontal day strip on phones. */
+:root{
+  --paper:#f4f5f8; --surface:#ffffff; --ink:#18202c; --muted:#5b6474; --line:#dce0e7;
+  --indigo:#27467a; --indigo-soft:#e6ecf6; --on-indigo:#ffffff;
+  --ochre:#94650f; --ochre-soft:#f5ead5;
+  --pass:#2b7149; --pass-soft:#e2f0e7; --fail:#a83c2a; --fail-soft:#f8e5e1;
+  --code-bg:#eef1f5; --code-ink:#1d2a3f;
+  --f-display:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#0f141b; --surface:#161c25; --ink:#e3e8ef; --muted:#9aa3b1; --line:#29323f;
+  --indigo:#93b2e8; --indigo-soft:#1b2940; --on-indigo:#0f141b;
+  --ochre:#e2b25c; --ochre-soft:#33291a;
+  --pass:#6fc596; --pass-soft:#162d20; --fail:#f08a7a; --fail-soft:#391e1a;
+  --code-bg:#10151d; --code-ink:#d6e0ef; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --paper:#0f141b; --surface:#161c25; --ink:#e3e8ef; --muted:#9aa3b1; --line:#29323f;
+  --indigo:#93b2e8; --indigo-soft:#1b2940; --on-indigo:#0f141b;
+  --ochre:#e2b25c; --ochre-soft:#33291a;
+  --pass:#6fc596; --pass-soft:#162d20; --fail:#f08a7a; --fail-soft:#391e1a;
+  --code-bg:#10151d; --code-ink:#d6e0ef; color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.25;margin:0}
+code{font-family:var(--f-mono);font-size:.88em;background:var(--code-bg);color:var(--code-ink);padding:.08em .35em;border-radius:4px}
+a{color:var(--indigo)}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--indigo);outline-offset:2px}
+
+.shell{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:250px minmax(0,1fr);gap:40px;padding-block:28px 64px}
+
+/* rail */
+.rail{position:sticky;top:calc(16px + env(safe-area-inset-top,0px));align-self:start;display:flex;flex-direction:column;gap:18px}
+.brand{display:flex;flex-direction:column;gap:2px}
+.brand b{font-family:var(--f-display);font-size:19px;font-weight:700;letter-spacing:.01em}
+.brand span{color:var(--muted);font-size:13px}
+.meter{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+.meter .bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.meter .bar i{display:block;height:100%;background:var(--indigo);border-radius:3px;transition:width .3s}
+.meter strong{color:var(--ink);font-weight:600}
+.weeks{display:flex;flex-direction:column;gap:14px}
+.wk h4{margin:0 0 4px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.wk ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px}
+.dlink{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;padding:5px 8px;border-radius:6px;text-decoration:none;color:var(--ink);font-size:13.5px}
+.dlink:hover{background:var(--surface)}
+.dlink.cur{background:var(--indigo-soft);color:var(--indigo);font-weight:600}
+.dnum{font-family:var(--f-mono);font-size:12px;color:var(--muted);text-align:right}
+.dlink.cur .dnum{color:var(--indigo)}
+.dot{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--line);justify-self:end}
+.dot.part{border-color:var(--ochre);background:linear-gradient(90deg,var(--ochre) 50%,transparent 50%)}
+.dot.done{border-color:var(--pass);background:var(--pass)}
+.extra{display:flex;flex-direction:column;gap:1px;border-top:1px solid var(--line);padding-top:12px}
+.extra .dlink{grid-template-columns:1fr}
+
+/* main */
+main{min-width:0;display:flex;flex-direction:column;gap:28px}
+.engine{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.engine i{width:7px;height:7px;border-radius:50%;background:var(--ochre)}
+body.ready .engine i{background:var(--pass)}
+.engine.err{color:var(--fail)} .engine.err i{background:var(--fail)}
+.dayhead{display:flex;flex-direction:column;gap:8px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;display:flex;flex-wrap:wrap;gap:4px 14px}
+.dayhead h1{font-size:clamp(28px,4vw,38px);font-weight:700}
+.goal{font-size:17px;color:var(--muted);max-width:62ch;margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--ochre-soft);color:var(--ochre)}
+.chip.done{background:var(--pass-soft);color:var(--pass)}
+
+details.tables{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+details.tables>summary{padding:12px 16px;cursor:pointer;font-weight:600;font-size:14px}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:18px;padding:4px 16px 16px}
+.tgrid h5{margin:0 0 6px;font-family:var(--f-mono);font-size:13px;font-weight:500;color:var(--indigo)}
+.tgrid p{margin:6px 0 0;font-size:12.5px;color:var(--muted)}
+
+section.block{display:flex;flex-direction:column;gap:14px}
+.sechead{display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--line);padding-bottom:8px}
+.sechead h2{font-size:21px;font-weight:700}
+.sechead span{font-size:13px;color:var(--muted)}
+.concept{display:flex;flex-direction:column;gap:8px}
+.concept h3{font-size:16.5px;font-weight:700}
+.prose{max-width:66ch}
+.prose p{margin:0 0 8px}
+.dialect{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:6px 0 8px}
+.dialect>div{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13.5px;line-height:1.9}
+.dl{display:block;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+
+/* runner */
+.runner{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.runner textarea{display:block;width:100%;border:0;resize:vertical;min-height:88px;padding:12px 14px;background:var(--code-bg);color:var(--code-ink);
+  font-family:var(--f-mono);font-size:13.5px;line-height:1.55;tab-size:2;white-space:pre;overflow-x:auto}
+.runner textarea:focus{outline:2px solid var(--indigo);outline-offset:-2px}
+.tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid var(--line)}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:5px 12px;border-radius:7px;font-size:13.5px;font-weight:500}
+.btn:hover{border-color:var(--indigo);color:var(--indigo)}
+.btn.primary{background:var(--indigo);color:var(--on-indigo);border-color:var(--indigo)}
+.btn.primary:hover{filter:brightness(1.08);color:var(--on-indigo)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.kbd{margin-left:auto;font-size:12px;color:var(--muted)}
+.out{border-top:1px solid var(--line);padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+.out:empty{display:none}
+.msg{font-size:13.5px;padding:7px 11px;border-radius:7px}
+.msg.ok{background:var(--pass-soft);color:var(--pass);font-weight:600}
+.msg.no{background:var(--fail-soft);color:var(--fail)}
+.msg.info{background:var(--indigo-soft);color:var(--indigo)}
+.msg small{display:block;font-weight:400;margin-top:2px}
+.twrap{overflow-x:auto;max-width:100%}
+table.res{border-collapse:collapse;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+table.res th{font-weight:500;color:var(--muted);text-align:left;border-bottom:1.5px solid var(--line);padding:4px 14px 4px 0;white-space:nowrap}
+table.res td{padding:3px 14px 3px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+table.res td.num{text-align:right}
+table.res .nul{color:var(--muted);font-style:italic}
+.rc{font-size:12px;color:var(--muted)}
+.lbl{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+
+/* exercise */
+.ex{display:flex;flex-direction:column;gap:10px;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.ex.passed{border-color:var(--pass)}
+.exhead{display:flex;gap:12px;align-items:flex-start}
+.exid{font-family:var(--f-mono);font-size:13px;font-weight:500;color:var(--indigo);background:var(--indigo-soft);border-radius:6px;padding:2px 7px;flex:none;margin-top:1px}
+.ex.passed .exid{background:var(--pass-soft);color:var(--pass)}
+.exhead p{margin:0;max-width:68ch;min-width:0}
+.ex .runner{border-radius:8px}
+.hint,.sol{font-size:13.5px;background:var(--paper);border-radius:8px;padding:10px 12px}
+.sol pre{margin:6px 0 0;font-family:var(--f-mono);font-size:13px;white-space:pre;overflow-x:auto;color:var(--code-ink)}
+
+.recap{border-left:3px solid var(--ochre);padding:4px 0 4px 14px;font-size:15px;max-width:66ch}
+.donebanner{background:var(--pass-soft);color:var(--pass);border-radius:10px;padding:12px 16px;font-weight:600}
+
+/* github */
+.gh{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.gh textarea.notes{width:100%;min-height:96px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font:inherit;font-size:14.5px;background:var(--paper);color:var(--ink);resize:vertical}
+.ghrow{display:grid;grid-template-columns:120px minmax(0,1fr) auto;gap:10px;align-items:center}
+.ghrow code{overflow-x:auto;white-space:nowrap;display:block;padding:5px 8px}
+.ghbtns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.gh details summary{cursor:pointer;font-size:13.5px;color:var(--muted)}
+.gh pre{background:var(--code-bg);color:var(--code-ink);font-family:var(--f-mono);font-size:12.5px;padding:12px;border-radius:8px;overflow-x:auto;max-height:360px;margin:8px 0 0}
+.fallback{width:100%;min-height:120px;font-family:var(--f-mono);font-size:12px;border:1px solid var(--ochre);border-radius:8px;padding:8px;background:var(--paper);color:var(--ink)}
+
+.nav{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.guide ol{padding-left:22px;margin:0;display:flex;flex-direction:column;gap:8px;max-width:66ch}
+.guide h2{font-size:19px;margin-top:6px}
+.note{font-size:13.5px;color:var(--muted);max-width:66ch}
+
+@media (max-width:860px){
+  .shell{grid-template-columns:minmax(0,1fr);gap:22px;padding-block:16px 48px}
+  .rail{position:static;gap:12px}
+  .weeks{flex-direction:row;overflow-x:auto;gap:12px;padding-bottom:4px}
+  .wk{flex:none}
+  .wk ol{flex-direction:row;gap:4px}
+  .dlink{grid-template-columns:auto;padding:6px 10px;border:1px solid var(--line);background:var(--surface);gap:0;text-align:center}
+  .dlink .dname,.dlink .dot{display:none}
+  .dlink .dnum{text-align:center}
+  .dlink.done-d{border-color:var(--pass)}
+  .extra{flex-direction:row;gap:6px;border-top:0;padding-top:0}
+  .extra .dlink{border:1px solid var(--line)}
+  .extra .dlink .dname{display:inline}
+  .ghrow{grid-template-columns:minmax(0,1fr) auto}
+  .ghrow .lbl{grid-column:1/-1}
+  .kbd{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="shell">
+  <aside class="rail" id="rail"></aside>
+  <main id="main"></main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-asm.js"></script>
+<script>
+const SCHEMA = `ATTACH DATABASE ':memory:' AS dannys_diner;
+CREATE TABLE dannys_diner.sales (customer_id VARCHAR(1), order_date DATE, product_id INTEGER);
+INSERT INTO dannys_diner.sales VALUES
+('A','2021-01-01',1),('A','2021-01-01',2),('A','2021-01-07',2),('A','2021-01-10',3),('A','2021-01-11',3),('A','2021-01-11',3),
+('B','2021-01-01',2),('B','2021-01-02',2),('B','2021-01-04',1),('B','2021-01-11',1),('B','2021-01-16',3),('B','2021-02-01',3),
+('C','2021-01-01',3),('C','2021-01-01',3),('C','2021-01-07',3);
+CREATE TABLE dannys_diner.menu (product_id INTEGER, product_name VARCHAR(5), price INTEGER);
+INSERT INTO dannys_diner.menu VALUES (1,'sushi',10),(2,'curry',15),(3,'ramen',12);
+CREATE TABLE dannys_diner.members (customer_id VARCHAR(1), join_date DATE);
+INSERT INTO dannys_diner.members VALUES ('A','2021-01-07'),('B','2021-01-09');`;
+
+const DAYS = [
+/* ---------------- WEEK 1 ---------------- */
+{ n:1, week:1, slug:"select", title:"Meet the data", topic:"SELECT, columns, LIMIT", minutes:20,
+  goal:"Read data out of a table and choose which columns you see.",
+  lesson:[
+    {h:"A database is a set of tables",
+     body:`<p>Danny's Diner keeps three tables: <code>sales</code> (who bought what, and when), <code>menu</code> (what each product is and costs), and <code>members</code> (who joined the loyalty program, and when). Every SQL question you answer in this course starts by reading from one or more of them.</p>
+<p><code>SELECT *</code> means "give me every column". <code>FROM sales</code> says which table. The semicolon ends the statement.</p>`,
+     example:`SELECT *\nFROM sales;`},
+    {h:"Pick only the columns you need",
+     body:`<p>List column names after <code>SELECT</code>, separated by commas. Real tables can have dozens of columns, so naming the ones you need is a habit worth building on day one.</p>`,
+     example:`SELECT customer_id, order_date\nFROM sales;`},
+    {h:"Peek at a few rows with LIMIT",
+     body:`<p><code>LIMIT 3</code> returns only the first 3 rows. Use it to get a feel for a big table without flooding your screen.</p>
+<p>SQL keywords are not case-sensitive; writing them in capitals is a convention that makes queries easier to scan. On the original site the tables live in a schema, so you will also see <code>dannys_diner.sales</code>. Both forms work here.</p>`,
+     example:`SELECT *\nFROM dannys_diner.sales\nLIMIT 3;`}
+  ],
+  exercises:[
+    {id:"1.1", prompt:"Show every row and every column from the <code>menu</code> table.",
+     hint:"Use the star after SELECT.", solution:`SELECT *\nFROM menu;`},
+    {id:"1.2", prompt:"Show only <code>product_name</code> and <code>price</code> from the menu.",
+     hint:"List the two column names after SELECT, separated by a comma.", solution:`SELECT product_name, price\nFROM menu;`},
+    {id:"1.3", prompt:"Show the <code>customer_id</code> and <code>join_date</code> of every loyalty member.",
+     hint:"Loyalty members live in the members table.", solution:`SELECT customer_id, join_date\nFROM members;`},
+    {id:"1.4", prompt:"Show the first 5 rows of the <code>sales</code> table, all columns.",
+     hint:"Add LIMIT at the very end.", solution:`SELECT *\nFROM sales\nLIMIT 5;`}
+  ],
+  recap:"SELECT chooses columns, FROM chooses the table, LIMIT caps the rows."
+},
+{ n:2, week:1, slug:"where", title:"Filter rows with WHERE", topic:"WHERE, AND, OR, IN", minutes:25,
+  goal:"Keep only the rows that match a condition.",
+  lesson:[
+    {h:"WHERE keeps matching rows",
+     body:`<p><code>WHERE</code> comes after <code>FROM</code> and tests each row. Text values go in single quotes; numbers do not.</p>`,
+     example:`SELECT *\nFROM sales\nWHERE customer_id = 'A';`},
+    {h:"Comparison operators",
+     body:`<p>You can use <code>=</code>, <code>&lt;&gt;</code> (not equal), <code>&gt;</code>, <code>&gt;=</code>, <code>&lt;</code> and <code>&lt;=</code>. Dates written as <code>'YYYY-MM-DD'</code> compare correctly, so <code>order_date &lt; '2021-01-07'</code> means "before January 7th".</p>`,
+     example:`SELECT *\nFROM menu\nWHERE price >= 12;`},
+    {h:"Combine conditions with AND, OR and IN",
+     body:`<p><code>AND</code> needs both conditions to be true; <code>OR</code> needs either. <code>IN (1, 3)</code> is a short way of writing <code>product_id = 1 OR product_id = 3</code>. When you mix AND with OR, wrap the OR part in brackets so the logic is unambiguous.</p>`,
+     example:`SELECT *\nFROM sales\nWHERE customer_id = 'B'\n  AND order_date < '2021-01-05';`}
+  ],
+  exercises:[
+    {id:"2.1", prompt:"Show all of customer B's purchases (all columns).", hint:"Compare customer_id to the text 'B'.",
+     solution:`SELECT *\nFROM sales\nWHERE customer_id = 'B';`},
+    {id:"2.2", prompt:"Show the menu items that cost more than $10 (all columns).", hint:"price > 10",
+     solution:`SELECT *\nFROM menu\nWHERE price > 10;`},
+    {id:"2.3", prompt:"Show every purchase made on <code>2021-01-01</code> (all columns).", hint:"Dates go in single quotes like text.",
+     solution:`SELECT *\nFROM sales\nWHERE order_date = '2021-01-01';`},
+    {id:"2.4", prompt:"Show customer A's purchases from <code>2021-01-10</code> onward, including that day (all columns).", hint:"Two conditions joined with AND. 'Including that day' means >=.",
+     solution:`SELECT *\nFROM sales\nWHERE customer_id = 'A'\n  AND order_date >= '2021-01-10';`},
+    {id:"2.5", prompt:"Show every purchase of product 1 or product 3 using <code>IN</code> (all columns).", hint:"WHERE product_id IN (...)",
+     solution:`SELECT *\nFROM sales\nWHERE product_id IN (1, 3);`}
+  ],
+  recap:"WHERE filters rows before anything else happens. Quote text and dates, not numbers."
+},
+{ n:3, week:1, slug:"order-by-distinct", title:"Sort, dedupe and rename", topic:"ORDER BY, DISTINCT, AS", minutes:25,
+  goal:"Control the order of results, remove duplicates and give columns readable names.",
+  lesson:[
+    {h:"ORDER BY sorts the result",
+     body:`<p>Without <code>ORDER BY</code>, a database is free to return rows in any order. Add <code>ASC</code> (the default, smallest first) or <code>DESC</code> (largest first). You can sort by several columns; the second one breaks ties in the first.</p>`,
+     example:`SELECT *\nFROM sales\nORDER BY customer_id, order_date DESC;`},
+    {h:"DISTINCT removes duplicate rows",
+     body:`<p><code>SELECT DISTINCT</code> keeps one copy of each unique row in the result. With two columns, it keeps each unique <em>combination</em>. Customer A ordered twice on 2021-01-11, but that is one visit.</p>`,
+     example:`SELECT DISTINCT customer_id, order_date\nFROM sales\nORDER BY customer_id, order_date;`},
+    {h:"AS gives a column a new name",
+     body:`<p>An alias changes only the label in your result, not the table. Clear names matter once you share results with a team, which is exactly what Danny wants.</p>`,
+     example:`SELECT product_name AS item, price AS price_usd\nFROM menu;`}
+  ],
+  exercises:[
+    {id:"3.1", prompt:"Show the menu sorted from most to least expensive (all columns).", hint:"ORDER BY price DESC", ordered:true,
+     solution:`SELECT *\nFROM menu\nORDER BY price DESC;`},
+    {id:"3.2", prompt:"List each customer who has made a purchase, once each. Return <code>customer_id</code>.", hint:"SELECT DISTINCT",
+     solution:`SELECT DISTINCT customer_id\nFROM sales;`},
+    {id:"3.3", prompt:"List the distinct dates customer A visited, earliest first. Return <code>order_date</code>.", hint:"DISTINCT, WHERE and ORDER BY together.", ordered:true,
+     solution:`SELECT DISTINCT order_date\nFROM sales\nWHERE customer_id = 'A'\nORDER BY order_date;`},
+    {id:"3.4", prompt:"Return <code>customer_id</code>, <code>order_date</code>, <code>product_id</code> from sales, sorted by customer, then newest date first, then product_id smallest first.", hint:"Three sort keys; only the date one is DESC.", ordered:true,
+     solution:`SELECT customer_id, order_date, product_id\nFROM sales\nORDER BY customer_id, order_date DESC, product_id;`},
+    {id:"3.5", prompt:"Show the menu with the columns renamed to <code>item</code> and <code>price_usd</code>.", hint:"product_name AS item", checkNames:true,
+     solution:`SELECT product_name AS item, price AS price_usd\nFROM menu;`}
+  ],
+  recap:"ORDER BY for order, DISTINCT for unique rows, AS for clear names."
+},
+{ n:4, week:1, slug:"aggregates", title:"Count, sum and average", topic:"COUNT, SUM, MIN, MAX, AVG", minutes:25,
+  goal:"Summarise many rows into a single number.",
+  lesson:[
+    {h:"Aggregate functions collapse rows",
+     body:`<p><code>COUNT(*)</code> counts rows. <code>SUM</code>, <code>AVG</code>, <code>MIN</code> and <code>MAX</code> work on a column. Without grouping, they turn the whole table (after WHERE) into one row.</p>`,
+     example:`SELECT COUNT(*) AS purchases,\n       MIN(order_date) AS first_day\nFROM sales;`},
+    {h:"COUNT(DISTINCT ...) counts unique values",
+     body:`<p>Customer A has 6 purchases but only 4 visit days. <code>COUNT(DISTINCT order_date)</code> gives the 4. This is the core of case study question 2.</p>`,
+     example:`SELECT COUNT(DISTINCT order_date) AS visit_days\nFROM sales\nWHERE customer_id = 'A';`},
+    {h:"ROUND tidies decimals",
+     body:`<p><code>ROUND(value, 2)</code> rounds to 2 decimal places. Averages often produce long decimals.</p>`,
+     example:`SELECT AVG(price) AS raw_avg,\n       ROUND(AVG(price), 2) AS avg_price\nFROM menu;`}
+  ],
+  exercises:[
+    {id:"4.1", prompt:"How many purchases are in the sales table? Return one number.", hint:"COUNT(*)",
+     solution:`SELECT COUNT(*) AS total_purchases\nFROM sales;`},
+    {id:"4.2", prompt:"What are the earliest and latest order dates? Return two columns: earliest, then latest.", hint:"MIN and MAX in the same SELECT.",
+     solution:`SELECT MIN(order_date) AS earliest, MAX(order_date) AS latest\nFROM sales;`},
+    {id:"4.3", prompt:"What is the average menu price, rounded to 2 decimals?", hint:"ROUND(AVG(price), 2)",
+     solution:`SELECT ROUND(AVG(price), 2) AS avg_price\nFROM menu;`},
+    {id:"4.4", prompt:"On how many different days did customer C visit?", hint:"COUNT(DISTINCT ...) plus a WHERE.",
+     solution:`SELECT COUNT(DISTINCT order_date) AS visit_days\nFROM sales\nWHERE customer_id = 'C';`}
+  ],
+  recap:"Aggregates turn many rows into one. COUNT(DISTINCT) counts unique values."
+},
+{ n:5, week:1, slug:"group-by", title:"Group results", topic:"GROUP BY, HAVING", minutes:30, caseQs:["Q2"],
+  goal:"Get one summary row per customer or product. You will answer your first case study question.",
+  lesson:[
+    {h:"GROUP BY makes one row per group",
+     body:`<p>Add <code>GROUP BY customer_id</code> and the aggregate runs once per customer instead of once for the whole table.</p>
+<p>The rule: every column in SELECT must either be in GROUP BY or be inside an aggregate function.</p>`,
+     example:`SELECT customer_id, COUNT(*) AS purchases\nFROM sales\nGROUP BY customer_id;`},
+    {h:"HAVING filters groups",
+     body:`<p><code>WHERE</code> filters rows <em>before</em> grouping. <code>HAVING</code> filters groups <em>after</em> the aggregates are calculated, so it can test things like <code>COUNT(*) &gt; 5</code>.</p>`,
+     example:`SELECT product_id, COUNT(*) AS times_ordered\nFROM sales\nGROUP BY product_id\nHAVING COUNT(*) >= 4;`}
+  ],
+  exercises:[
+    {id:"5.1", prompt:"Count purchases per customer. Return <code>customer_id</code> and the count.", hint:"GROUP BY customer_id",
+     solution:`SELECT customer_id, COUNT(*) AS purchase_count\nFROM sales\nGROUP BY customer_id;`},
+    {id:"5.2", prompt:"Count how many times each <code>product_id</code> was ordered. Return product_id and the count.", hint:"Group by the product instead.",
+     solution:`SELECT product_id, COUNT(*) AS times_ordered\nFROM sales\nGROUP BY product_id;`},
+    {id:"5.3", prompt:"Which customers made more than 5 purchases? Return <code>customer_id</code> and the count.", hint:"HAVING COUNT(*) > 5",
+     solution:`SELECT customer_id, COUNT(*) AS purchase_count\nFROM sales\nGROUP BY customer_id\nHAVING COUNT(*) > 5;`},
+    {id:"5.4", caseQ:"Q2", prompt:"<strong>Case study Q2.</strong> How many days has each customer visited the restaurant? Return <code>customer_id</code> and <code>visit_days</code>.", hint:"Combine GROUP BY with COUNT(DISTINCT order_date).",
+     solution:`SELECT customer_id, COUNT(DISTINCT order_date) AS visit_days\nFROM sales\nGROUP BY customer_id;`}
+  ],
+  recap:"GROUP BY gives one row per group; HAVING filters those groups."
+},
+/* ---------------- WEEK 2 ---------------- */
+{ n:6, week:2, slug:"inner-join", title:"Join two tables", topic:"INNER JOIN", minutes:30, caseQs:["Q1"],
+  goal:"Combine sales with the menu so you can see names and prices.",
+  lesson:[
+    {h:"Why joins exist",
+     body:`<p>The sales table stores <code>product_id</code>, not the product name or price. That information lives in <code>menu</code>. A join lines up rows from both tables where a condition matches, here <code>sales.product_id = menu.product_id</code>.</p>`,
+     example:`SELECT sales.customer_id, sales.order_date, menu.product_name\nFROM sales\nJOIN menu\n  ON sales.product_id = menu.product_id;`},
+    {h:"Table aliases keep it short",
+     body:`<p>Give each table a short alias (<code>s</code>, <code>m</code>) and prefix columns with it. If a column exists in both tables, like <code>product_id</code>, the prefix is required, otherwise you get an "ambiguous column name" error.</p>
+<p><code>JOIN</code> and <code>INNER JOIN</code> mean the same thing: only rows with a match on both sides are kept.</p>`,
+     example:`SELECT s.customer_id, m.product_name, m.price\nFROM sales AS s\nINNER JOIN menu AS m\n  ON s.product_id = m.product_id;`}
+  ],
+  exercises:[
+    {id:"6.1", prompt:"Show each sale with its product name. Return <code>customer_id</code>, <code>order_date</code>, <code>product_name</code>.", hint:"JOIN menu ON the product_id columns.",
+     solution:`SELECT s.customer_id, s.order_date, m.product_name\nFROM sales AS s\nJOIN menu AS m ON s.product_id = m.product_id;`},
+    {id:"6.2", prompt:"Show each sale's price. Return <code>customer_id</code>, <code>product_name</code>, <code>price</code>.", hint:"Same join, different columns.",
+     solution:`SELECT s.customer_id, m.product_name, m.price\nFROM sales AS s\nJOIN menu AS m ON s.product_id = m.product_id;`},
+    {id:"6.3", caseQ:"Q1", prompt:"<strong>Case study Q1.</strong> What is the total amount each customer spent? Return <code>customer_id</code> and <code>total_spent</code>.", hint:"Join, then SUM(price) grouped by customer.",
+     solution:`SELECT s.customer_id, SUM(m.price) AS total_spent\nFROM sales AS s\nJOIN menu AS m ON s.product_id = m.product_id\nGROUP BY s.customer_id;`},
+    {id:"6.4", prompt:"How much revenue did each menu item bring in? Return <code>product_name</code> and <code>revenue</code>.", hint:"Group by product_name instead of customer.",
+     solution:`SELECT m.product_name, SUM(m.price) AS revenue\nFROM sales AS s\nJOIN menu AS m ON s.product_id = m.product_id\nGROUP BY m.product_name;`}
+  ],
+  recap:"JOIN ... ON lines up related rows. Prefix shared column names with the table alias."
+},
+{ n:7, week:2, slug:"left-join-null", title:"Keep unmatched rows", topic:"LEFT JOIN, NULL", minutes:25,
+  goal:"Join without losing customers who are not members, and work with missing values.",
+  lesson:[
+    {h:"INNER JOIN drops customer C",
+     body:`<p>Customer C never joined the loyalty program, so C has no row in <code>members</code>. An inner join between sales and members silently drops all of C's purchases. Run this and count the rows: 12, not 15.</p>`,
+     example:`SELECT s.customer_id, s.order_date, mb.join_date\nFROM sales AS s\nJOIN members AS mb ON s.customer_id = mb.customer_id;`},
+    {h:"LEFT JOIN keeps every row from the left table",
+     body:`<p>With <code>LEFT JOIN</code>, every row from the first (left) table stays. Where there is no match, the right table's columns are <code>NULL</code>, meaning "no value".</p>`,
+     example:`SELECT s.customer_id, s.order_date, mb.join_date\nFROM sales AS s\nLEFT JOIN members AS mb ON s.customer_id = mb.customer_id;`},
+    {h:"Test for NULL with IS NULL",
+     body:`<p>NULL is not equal to anything, not even NULL, so <code>= NULL</code> never matches. Use <code>IS NULL</code> or <code>IS NOT NULL</code>.</p>`,
+     example:`SELECT DISTINCT s.customer_id\nFROM sales AS s\nLEFT JOIN members AS mb ON s.customer_id = mb.customer_id\nWHERE mb.join_date IS NOT NULL;`}
+  ],
+  exercises:[
+    {id:"7.1", prompt:"Show every sale with the customer's join date (blank for non-members). Return <code>customer_id</code>, <code>order_date</code>, <code>join_date</code>. You should get 15 rows.", hint:"LEFT JOIN members",
+     solution:`SELECT s.customer_id, s.order_date, mb.join_date\nFROM sales AS s\nLEFT JOIN members AS mb ON s.customer_id = mb.customer_id;`},
+    {id:"7.2", prompt:"Which customers bought something but are not members? Return <code>customer_id</code>, once each.", hint:"LEFT JOIN, then WHERE join_date IS NULL.",
+     solution:`SELECT DISTINCT s.customer_id\nFROM sales AS s\nLEFT JOIN members AS mb ON s.customer_id = mb.customer_id\nWHERE mb.join_date IS NULL;`},
+    {id:"7.3", prompt:"For each customer, show their join date and number of purchases. Return <code>customer_id</code>, <code>join_date</code>, <code>purchase_count</code>.", hint:"LEFT JOIN, then GROUP BY both customer_id and join_date.",
+     solution:`SELECT s.customer_id, mb.join_date, COUNT(*) AS purchase_count\nFROM sales AS s\nLEFT JOIN members AS mb ON s.customer_id = mb.customer_id\nGROUP BY s.customer_id, mb.join_date;`}
+  ],
+  recap:"LEFT JOIN keeps all left rows. Missing matches show as NULL; test with IS NULL."
+},
+{ n:8, week:2, slug:"case-when", title:"Add logic with CASE", topic:"CASE WHEN", minutes:25,
+  goal:"Create labels, flags and conditional calculations.",
+  lesson:[
+    {h:"CASE is SQL's if/else",
+     body:`<p><code>CASE WHEN condition THEN value ELSE other END</code> produces a new column. Conditions are checked top to bottom and the first true one wins.</p>`,
+     example:`SELECT product_name, price,\n  CASE WHEN price >= 12 THEN 'premium'\n       ELSE 'standard'\n  END AS price_tier\nFROM menu;`},
+    {h:"Flags from comparisons between columns",
+     body:`<p>You can compare two columns inside a CASE. Was this purchase made after the customer joined? Note what happens for customer C: <code>join_date</code> is NULL, the comparison is not true, so the ELSE branch runs.</p>`,
+     example:`SELECT s.customer_id, s.order_date, mb.join_date,\n  CASE WHEN s.order_date >= mb.join_date THEN 'Y' ELSE 'N' END AS member\nFROM sales AS s\nLEFT JOIN members AS mb ON s.customer_id = mb.customer_id;`},
+    {h:"Conditional math",
+     body:`<p>CASE can return numbers too. This is how the loyalty points rules in questions 9 and 10 are written.</p>`,
+     example:`SELECT product_name, price,\n  CASE WHEN product_name = 'sushi' THEN price * 2 ELSE price END AS boosted\nFROM menu;`}
+  ],
+  exercises:[
+    {id:"8.1", prompt:"Label each menu item <code>'premium'</code> if price is 12 or more, else <code>'standard'</code>. Return <code>product_name</code>, <code>price</code>, <code>price_tier</code>.", hint:"CASE WHEN price >= 12 ...",
+     solution:`SELECT product_name, price,\n  CASE WHEN price >= 12 THEN 'premium' ELSE 'standard' END AS price_tier\nFROM menu;`},
+    {id:"8.2", prompt:"For every sale, flag whether the customer was a member at the time (<code>'Y'</code> if order_date is on or after join_date, else <code>'N'</code>). Return <code>customer_id</code>, <code>order_date</code>, <code>member</code>.", hint:"LEFT JOIN members so customer C stays in.",
+     solution:`SELECT s.customer_id, s.order_date,\n  CASE WHEN s.order_date >= mb.join_date THEN 'Y' ELSE 'N' END AS member\nFROM sales AS s\nLEFT JOIN members AS mb ON s.customer_id = mb.customer_id;`},
+    {id:"8.3", prompt:"Every $1 spent earns 10 points, and sushi earns double (20 per $1). Show the points for each sale. Return <code>customer_id</code>, <code>product_name</code>, <code>points</code>.", hint:"Join menu, then CASE on product_name.",
+     solution:`SELECT s.customer_id, m.product_name,\n  CASE WHEN m.product_name = 'sushi' THEN m.price * 20 ELSE m.price * 10 END AS points\nFROM sales AS s\nJOIN menu AS m ON s.product_id = m.product_id;`}
+  ],
+  recap:"CASE WHEN ... THEN ... ELSE ... END adds if/else logic to any column."
+},
+{ n:9, week:2, slug:"combine", title:"Put it all together", topic:"JOIN + CASE + GROUP BY", minutes:30, caseQs:["Q8","Q9"],
+  goal:"Combine everything so far to answer two more case study questions.",
+  lesson:[
+    {h:"The order clauses are written in",
+     body:`<p><code>SELECT</code> &rarr; <code>FROM</code> &rarr; <code>JOIN</code> &rarr; <code>WHERE</code> &rarr; <code>GROUP BY</code> &rarr; <code>HAVING</code> &rarr; <code>ORDER BY</code> &rarr; <code>LIMIT</code>.</p>
+<p>The database runs them in a different order: FROM and JOIN first, then WHERE, GROUP BY, HAVING, then SELECT, ORDER BY and LIMIT. That is why WHERE cannot use an alias you created in SELECT, but ORDER BY can.</p>`,
+     example:`SELECT s.customer_id, SUM(m.price) AS total_spent\nFROM sales AS s\nJOIN menu AS m ON s.product_id = m.product_id\nWHERE s.order_date < '2021-01-10'\nGROUP BY s.customer_id\nORDER BY total_spent DESC;`},
+    {h:"CASE inside SUM",
+     body:`<p>Wrap a CASE inside SUM to add up a calculated value per group. This pattern shows up constantly in product analytics, for example counting only "active" events.</p>`,
+     example:`SELECT s.customer_id,\n  SUM(CASE WHEN m.product_name = 'ramen' THEN 1 ELSE 0 END) AS ramen_orders\nFROM sales AS s\nJOIN menu AS m ON s.product_id = m.product_id\nGROUP BY s.customer_id;`}
+  ],
+  exercises:[
+    {id:"9.1", caseQ:"Q9", prompt:"<strong>Case study Q9.</strong> If each $1 spent equals 10 points and sushi has a 2x multiplier, how many points would each customer have? Return <code>customer_id</code> and <code>total_points</code>.", hint:"Yesterday's CASE from 8.3, wrapped in SUM and grouped by customer.",
+     solution:`SELECT s.customer_id,\n  SUM(CASE WHEN m.product_name = 'sushi' THEN m.price * 20\n           ELSE m.price * 10 END) AS total_points\nFROM sales AS s\nJOIN menu AS m ON s.product_id = m.product_id\nGROUP BY s.customer_id;`},
+    {id:"9.2", caseQ:"Q8", prompt:"<strong>Case study Q8.</strong> What is the total items and amount spent for each member before they became a member? Return <code>customer_id</code>, <code>total_items</code>, <code>total_spent</code>.", hint:"Join all three tables. Inner join members (non-members are out), and keep order_date &lt; join_date.",
+     solution:`SELECT s.customer_id,\n  COUNT(*) AS total_items,\n  SUM(m.price) AS total_spent\nFROM sales AS s\nJOIN menu AS m ON s.product_id = m.product_id\nJOIN members AS mb ON s.customer_id = mb.customer_id\nWHERE s.order_date < mb.join_date\nGROUP BY s.customer_id;`},
+    {id:"9.3", prompt:"How many purchases did each member make on or after their join date? Return <code>customer_id</code> and <code>member_purchases</code>.", hint:"Same shape as 9.2 with the date test flipped.",
+     solution:`SELECT s.customer_id, COUNT(*) AS member_purchases\nFROM sales AS s\nJOIN members AS mb ON s.customer_id = mb.customer_id\nWHERE s.order_date >= mb.join_date\nGROUP BY s.customer_id;`}
+  ],
+  recap:"Write in clause order, think in execution order. CASE inside SUM is a power move."
+},
+{ n:10, week:2, slug:"subqueries-cte", title:"Queries inside queries", topic:"Subqueries, CTEs", minutes:30, caseQs:["Q4"],
+  goal:"Break a hard question into steps.",
+  lesson:[
+    {h:"A subquery is a query in brackets",
+     body:`<p>You can use the result of one query inside another. Here the inner query finds the average price, and the outer query keeps items above it.</p>`,
+     example:`SELECT product_name, price\nFROM menu\nWHERE price > (SELECT AVG(price) FROM menu);`},
+    {h:"CTEs: name your steps with WITH",
+     body:`<p>A common table expression (CTE) gives a subquery a name at the top of your statement. It reads top to bottom like a recipe, and you will use it for every window function question next week.</p>`,
+     example:`WITH customer_spend AS (\n  SELECT s.customer_id, SUM(m.price) AS total_spent\n  FROM sales AS s\n  JOIN menu AS m ON s.product_id = m.product_id\n  GROUP BY s.customer_id\n)\nSELECT *\nFROM customer_spend\nORDER BY total_spent DESC;`},
+    {h:"Top 1 with ORDER BY and LIMIT",
+     body:`<p>To find the single biggest value, sort descending and keep one row. (PostgreSQL and SQLite use LIMIT; SQL Server uses TOP.)</p>`,
+     example:`SELECT product_id, COUNT(*) AS times_ordered\nFROM sales\nGROUP BY product_id\nORDER BY times_ordered DESC\nLIMIT 1;`}
+  ],
+  exercises:[
+    {id:"10.1", caseQ:"Q4", prompt:"<strong>Case study Q4.</strong> What is the most purchased item on the menu and how many times was it purchased? Return <code>product_name</code> and <code>times_purchased</code>.", hint:"Join menu, group by product_name, order by the count descending, LIMIT 1.",
+     solution:`SELECT m.product_name, COUNT(*) AS times_purchased\nFROM sales AS s\nJOIN menu AS m ON s.product_id = m.product_id\nGROUP BY m.product_name\nORDER BY times_purchased DESC\nLIMIT 1;`},
+    {id:"10.2", prompt:"Which menu items cost more than the average menu price? Return <code>product_name</code> and <code>price</code>.", hint:"Subquery in WHERE.",
+     solution:`SELECT product_name, price\nFROM menu\nWHERE price > (SELECT AVG(price) FROM menu);`},
+    {id:"10.3", prompt:"Using a CTE, find customers who spent more than $50. Return <code>customer_id</code> and <code>total_spent</code>.", hint:"Build customer_spend in WITH, then filter it with WHERE.",
+     solution:`WITH customer_spend AS (\n  SELECT s.customer_id, SUM(m.price) AS total_spent\n  FROM sales AS s\n  JOIN menu AS m ON s.product_id = m.product_id\n  GROUP BY s.customer_id\n)\nSELECT customer_id, total_spent\nFROM customer_spend\nWHERE total_spent > 50;`},
+    {id:"10.4", prompt:"Using a CTE, find each customer's first visit date, then show everything they ordered that day. Return <code>customer_id</code>, <code>order_date</code>, <code>product_name</code> (keep duplicates if they ordered the same thing twice).", hint:"CTE with MIN(order_date) per customer, then join it back to sales and menu on customer_id and date.",
+     solution:`WITH first_visit AS (\n  SELECT customer_id, MIN(order_date) AS first_date\n  FROM sales\n  GROUP BY customer_id\n)\nSELECT s.customer_id, s.order_date, m.product_name\nFROM sales AS s\nJOIN first_visit AS f\n  ON s.customer_id = f.customer_id AND s.order_date = f.first_date\nJOIN menu AS m ON s.product_id = m.product_id;`}
+  ],
+  recap:"Subqueries nest; CTEs name each step. Both turn one hard question into easy ones."
+},
+/* ---------------- WEEK 3 ---------------- */
+{ n:11, week:3, slug:"window-functions", title:"Window functions", topic:"ROW_NUMBER, RANK, DENSE_RANK", minutes:35, caseQs:["Q3"],
+  goal:"Rank rows within each customer without collapsing them.",
+  lesson:[
+    {h:"A window looks across related rows",
+     body:`<p>GROUP BY collapses rows. A window function keeps every row and adds a calculation over a "window" of related rows. <code>PARTITION BY customer_id</code> restarts the calculation for each customer; <code>ORDER BY</code> inside OVER sets the order within each one.</p>`,
+     example:`SELECT customer_id, order_date, product_id,\n  ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY order_date) AS row_num\nFROM sales;`},
+    {h:"Three ways to handle ties",
+     body:`<p>Customer A ordered two items on 2021-01-01. <code>ROW_NUMBER</code> gives them 1 and 2 (arbitrary). <code>RANK</code> gives both 1, then jumps to 3. <code>DENSE_RANK</code> gives both 1, then continues at 2. For "first item purchased", ties matter, so DENSE_RANK or RANK is the honest choice.</p>`,
+     example:`SELECT customer_id, order_date,\n  ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY order_date) AS rn,\n  RANK()       OVER (PARTITION BY customer_id ORDER BY order_date) AS rnk,\n  DENSE_RANK() OVER (PARTITION BY customer_id ORDER BY order_date) AS dense\nFROM sales\nWHERE customer_id = 'A';`},
+    {h:"Filter a window with a CTE",
+     body:`<p>You cannot put a window function in WHERE, because WHERE runs before SELECT. Calculate the rank in a CTE, then filter the CTE.</p>`,
+     example:`WITH ranked AS (\n  SELECT customer_id, order_date, product_id,\n    DENSE_RANK() OVER (PARTITION BY customer_id ORDER BY order_date) AS rnk\n  FROM sales\n)\nSELECT *\nFROM ranked\nWHERE rnk = 1;`}
+  ],
+  exercises:[
+    {id:"11.1", prompt:"Number each customer's purchases in date order, breaking ties by product_id. Return <code>customer_id</code>, <code>order_date</code>, <code>product_id</code>, <code>row_num</code>.", hint:"ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY order_date, product_id)",
+     solution:`SELECT customer_id, order_date, product_id,\n  ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY order_date, product_id) AS row_num\nFROM sales;`},
+    {id:"11.2", prompt:"Give each sale a DENSE_RANK by date within each customer. Return <code>customer_id</code>, <code>order_date</code>, <code>product_id</code>, <code>date_rank</code>.", hint:"Swap ROW_NUMBER for DENSE_RANK and order by order_date only.",
+     solution:`SELECT customer_id, order_date, product_id,\n  DENSE_RANK() OVER (PARTITION BY customer_id ORDER BY order_date) AS date_rank\nFROM sales;`},
+    {id:"11.3", caseQ:"Q3", prompt:"<strong>Case study Q3.</strong> What was the first item from the menu purchased by each customer? List each item once per customer. Return <code>customer_id</code> and <code>product_name</code>.", hint:"Rank by date in a CTE (join menu inside it), keep rank 1, and use DISTINCT or GROUP BY so customer C's two ramens show once.",
+     solution:`WITH ranked AS (\n  SELECT s.customer_id, m.product_name,\n    DENSE_RANK() OVER (PARTITION BY s.customer_id ORDER BY s.order_date) AS rnk\n  FROM sales AS s\n  JOIN menu AS m ON s.product_id = m.product_id\n)\nSELECT DISTINCT customer_id, product_name\nFROM ranked\nWHERE rnk = 1;`}
+  ],
+  recap:"PARTITION BY restarts per group, ORDER BY sets the ranking. Filter ranks in a CTE."
+},
+{ n:12, week:3, slug:"rank-groups", title:"Rank within groups", topic:"GROUP BY + RANK", minutes:30, caseQs:["Q5"],
+  goal:"Find each customer's favourite item, ties included.",
+  lesson:[
+    {h:"Group first, then rank",
+     body:`<p>To find a favourite, first count how often each customer ordered each item (GROUP BY). Then rank those counts within each customer, highest first.</p>`,
+     example:`WITH item_counts AS (\n  SELECT s.customer_id, m.product_name, COUNT(*) AS order_count\n  FROM sales AS s\n  JOIN menu AS m ON s.product_id = m.product_id\n  GROUP BY s.customer_id, m.product_name\n)\nSELECT *,\n  RANK() OVER (PARTITION BY customer_id ORDER BY order_count DESC) AS rnk\nFROM item_counts;`},
+    {h:"A window can order by an aggregate",
+     body:`<p>You can also rank directly in the grouped query, because window functions run after GROUP BY. The CTE version is easier to read; both are correct.</p>`,
+     example:`SELECT s.customer_id, m.product_name, COUNT(*) AS order_count,\n  RANK() OVER (PARTITION BY s.customer_id ORDER BY COUNT(*) DESC) AS rnk\nFROM sales AS s\nJOIN menu AS m ON s.product_id = m.product_id\nGROUP BY s.customer_id, m.product_name;`}
+  ],
+  exercises:[
+    {id:"12.1", prompt:"Count how many times each customer ordered each item. Return <code>customer_id</code>, <code>product_name</code>, <code>order_count</code>.", hint:"GROUP BY two columns.",
+     solution:`SELECT s.customer_id, m.product_name, COUNT(*) AS order_count\nFROM sales AS s\nJOIN menu AS m ON s.product_id = m.product_id\nGROUP BY s.customer_id, m.product_name;`},
+    {id:"12.2", caseQ:"Q5", prompt:"<strong>Case study Q5.</strong> Which item was the most popular for each customer? Include ties. Return <code>customer_id</code>, <code>product_name</code>, <code>order_count</code>.", hint:"Rank 12.1's counts DESC per customer, keep rank 1.",
+     solution:`WITH item_counts AS (\n  SELECT s.customer_id, m.product_name, COUNT(*) AS order_count,\n    RANK() OVER (PARTITION BY s.customer_id ORDER BY COUNT(*) DESC) AS rnk\n  FROM sales AS s\n  JOIN menu AS m ON s.product_id = m.product_id\n  GROUP BY s.customer_id, m.product_name\n)\nSELECT customer_id, product_name, order_count\nFROM item_counts\nWHERE rnk = 1;`},
+    {id:"12.3", prompt:"Now the opposite: each customer's least popular item(s), ties included. Return <code>customer_id</code>, <code>product_name</code>, <code>order_count</code>.", hint:"Rank ascending instead of descending.",
+     solution:`WITH item_counts AS (\n  SELECT s.customer_id, m.product_name, COUNT(*) AS order_count,\n    RANK() OVER (PARTITION BY s.customer_id ORDER BY COUNT(*) ASC) AS rnk\n  FROM sales AS s\n  JOIN menu AS m ON s.product_id = m.product_id\n  GROUP BY s.customer_id, m.product_name\n)\nSELECT customer_id, product_name, order_count\nFROM item_counts\nWHERE rnk = 1;`}
+  ],
+  recap:"Aggregate in one step, rank in the next. RANK keeps ties."
+},
+{ n:13, week:3, slug:"membership", title:"Before and after joining", topic:"Filtered windows, assumptions", minutes:30, caseQs:["Q6","Q7"],
+  goal:"Answer membership timing questions, and state your assumptions like an analyst.",
+  lesson:[
+    {h:"Filter first, then rank",
+     body:`<p>To find the first purchase <em>after</em> joining, keep only purchases on or after the join date (in a CTE), then rank by date ascending. For the last purchase <em>before</em> joining, keep earlier purchases and rank by date descending.</p>`,
+     example:`WITH after_join AS (\n  SELECT s.customer_id, s.order_date, s.product_id,\n    DENSE_RANK() OVER (PARTITION BY s.customer_id ORDER BY s.order_date) AS rnk\n  FROM sales AS s\n  JOIN members AS mb ON s.customer_id = mb.customer_id\n  WHERE s.order_date >= mb.join_date\n)\nSELECT * FROM after_join;`},
+    {h:"Assumptions change answers",
+     body:`<p>Customer A joined on 2021-01-07 and ordered curry that same day. Does that order count as a member purchase? The question does not say. Analysts write their assumption down next to the query. In this course we treat the join date as a member day (<code>&gt;=</code>) for Q6, and you will test the other reading in 13.3.</p>
+<p>As a product manager, spotting these gaps in a question is often worth more than the query itself.</p>`,
+     example:null}
+  ],
+  exercises:[
+    {id:"13.1", caseQ:"Q6", prompt:"<strong>Case study Q6.</strong> Which item was purchased first by each customer after they became a member (join date counts)? Return <code>customer_id</code>, <code>order_date</code>, <code>product_name</code>.", hint:"Filter order_date >= join_date inside the CTE, rank by date ascending, keep rank 1.",
+     solution:`WITH after_join AS (\n  SELECT s.customer_id, s.order_date, m.product_name,\n    DENSE_RANK() OVER (PARTITION BY s.customer_id ORDER BY s.order_date) AS rnk\n  FROM sales AS s\n  JOIN members AS mb ON s.customer_id = mb.customer_id\n  JOIN menu AS m ON s.product_id = m.product_id\n  WHERE s.order_date >= mb.join_date\n)\nSELECT customer_id, order_date, product_name\nFROM after_join\nWHERE rnk = 1;`},
+    {id:"13.2", caseQ:"Q7", prompt:"<strong>Case study Q7.</strong> Which item(s) were purchased just before each customer became a member? Include ties. Return <code>customer_id</code>, <code>order_date</code>, <code>product_name</code>.", hint:"Keep order_date &lt; join_date, rank by date DESCENDING.",
+     solution:`WITH before_join AS (\n  SELECT s.customer_id, s.order_date, m.product_name,\n    DENSE_RANK() OVER (PARTITION BY s.customer_id ORDER BY s.order_date DESC) AS rnk\n  FROM sales AS s\n  JOIN members AS mb ON s.customer_id = mb.customer_id\n  JOIN menu AS m ON s.product_id = m.product_id\n  WHERE s.order_date < mb.join_date\n)\nSELECT customer_id, order_date, product_name\nFROM before_join\nWHERE rnk = 1;`},
+    {id:"13.3", prompt:"Re-run Q6 with the other assumption: only purchases strictly after the join date count. Return <code>customer_id</code>, <code>order_date</code>, <code>product_name</code>. Compare with 13.1: whose answer changed?", hint:"Change one character in your 13.1 query.",
+     solution:`WITH after_join AS (\n  SELECT s.customer_id, s.order_date, m.product_name,\n    DENSE_RANK() OVER (PARTITION BY s.customer_id ORDER BY s.order_date) AS rnk\n  FROM sales AS s\n  JOIN members AS mb ON s.customer_id = mb.customer_id\n  JOIN menu AS m ON s.product_id = m.product_id\n  WHERE s.order_date > mb.join_date\n)\nSELECT customer_id, order_date, product_name\nFROM after_join\nWHERE rnk = 1;`}
+  ],
+  recap:"Filter the window first, choose ASC or DESC by direction, and write your assumption down."
+},
+{ n:14, week:3, slug:"dates", title:"Dates and the points program", topic:"Date functions, BETWEEN", minutes:35, caseQs:["Q10"],
+  goal:"Do date arithmetic and solve the hardest case study question.",
+  lesson:[
+    {h:"Date arithmetic differs by database",
+     body:`<p>This tutorial runs SQLite in your browser. The original DB Fiddle uses PostgreSQL. Most of what you have written so far runs on both; dates are where they differ.</p>
+<div class="dialect"><div><span class="dl">SQLite (here)</span><code>date(join_date, '+6 days')</code><br><code>strftime('%Y-%m', order_date)</code></div><div><span class="dl">PostgreSQL (DB Fiddle)</span><code>join_date + INTERVAL '6 days'</code><br><code>DATE_TRUNC('month', order_date)</code></div></div>`,
+     example:`SELECT customer_id, join_date,\n  date(join_date, '+6 days') AS week_end\nFROM members;`},
+    {h:"BETWEEN is inclusive",
+     body:`<p><code>x BETWEEN a AND b</code> means <code>x &gt;= a AND x &lt;= b</code>. Both ends count. For "the first week including the join date", that is join_date through join_date + 6 days: 7 days.</p>`,
+     example:`SELECT s.customer_id, s.order_date, mb.join_date\nFROM sales AS s\nJOIN members AS mb ON s.customer_id = mb.customer_id\nWHERE s.order_date BETWEEN mb.join_date AND date(mb.join_date, '+6 days');`}
+  ],
+  exercises:[
+    {id:"14.1", prompt:"For each member, show their join date and the last day of their first week (join date + 6 days). Return <code>customer_id</code>, <code>join_date</code>, <code>week_end</code>.", hint:"date(join_date, '+6 days')",
+     solution:`SELECT customer_id, join_date,\n  date(join_date, '+6 days') AS week_end\nFROM members;`},
+    {id:"14.2", prompt:"Count each customer's purchases in January 2021 only. Return <code>customer_id</code> and <code>jan_purchases</code>.", hint:"order_date &lt;= '2021-01-31', or BETWEEN '2021-01-01' AND '2021-01-31'.",
+     solution:`SELECT customer_id, COUNT(*) AS jan_purchases\nFROM sales\nWHERE order_date BETWEEN '2021-01-01' AND '2021-01-31'\nGROUP BY customer_id;`},
+    {id:"14.3", caseQ:"Q10", prompt:"<strong>Case study Q10.</strong> In the first week after a customer joins (including the join date) they earn 2x points on all items, not just sushi. Outside that week, Q9's rules apply. How many points do customers A and B have at the end of January? Return <code>customer_id</code> and <code>total_points</code>.", hint:"Join all three tables, keep January only, and use a CASE with three branches: first-week purchase, sushi, everything else.",
+     solution:`SELECT s.customer_id,\n  SUM(CASE\n        WHEN s.order_date BETWEEN mb.join_date AND date(mb.join_date, '+6 days')\n          THEN m.price * 20\n        WHEN m.product_name = 'sushi' THEN m.price * 20\n        ELSE m.price * 10\n      END) AS total_points\nFROM sales AS s\nJOIN menu AS m ON s.product_id = m.product_id\nJOIN members AS mb ON s.customer_id = mb.customer_id\nWHERE s.order_date <= '2021-01-31'\nGROUP BY s.customer_id;`}
+  ],
+  recap:"Date syntax is dialect-specific; the logic is not. CASE branch order matters."
+},
+{ n:15, week:3, slug:"capstone", title:"Capstone: build Danny's tables", topic:"Bonus questions", minutes:40, caseQs:["Bonus 1","Bonus 2"],
+  goal:"Build the two ready-made tables Danny's team asked for, so they never need to write a join.",
+  lesson:[
+    {h:"Analysts build tables for other people",
+     body:`<p>Danny's bonus questions ask for datasets his team can open without SQL. In a real company this becomes a <em>view</em> or a dashboard source. You already know every piece: LEFT JOIN (keep customer C), CASE (member flag), and RANK (ranking).</p>`,
+     example:null},
+    {h:"NULL on purpose",
+     body:`<p>For the ranking table, non-member purchases must show <code>NULL</code>. A CASE with no ELSE returns NULL automatically. Partitioning the rank by both customer and member status makes the member purchases start at 1.</p>`,
+     example:`SELECT customer_id, order_date,\n  CASE WHEN customer_id = 'A' THEN 'yes' END AS only_a\nFROM sales\nLIMIT 8;`}
+  ],
+  exercises:[
+    {id:"15.1", caseQ:"Bonus 1", prompt:"<strong>Join All The Things.</strong> Recreate Danny's table: <code>customer_id</code>, <code>order_date</code>, <code>product_name</code>, <code>price</code>, <code>member</code> ('Y' or 'N'), for all 15 purchases, sorted by customer, date and product name.", hint:"Two joins (one of them LEFT), one CASE, ORDER BY three columns.", ordered:true,
+     solution:`SELECT s.customer_id, s.order_date, m.product_name, m.price,\n  CASE WHEN s.order_date >= mb.join_date THEN 'Y' ELSE 'N' END AS member\nFROM sales AS s\nJOIN menu AS m ON s.product_id = m.product_id\nLEFT JOIN members AS mb ON s.customer_id = mb.customer_id\nORDER BY s.customer_id, s.order_date, m.product_name;`},
+    {id:"15.2", caseQ:"Bonus 2", prompt:"<strong>Rank All The Things.</strong> Add a <code>ranking</code> column to 15.1: rank member purchases by date within each customer (ties share a rank), and leave non-member purchases as NULL. Same sort order.", hint:"Put 15.1 in a CTE. Then CASE WHEN member = 'N' THEN NULL ELSE RANK() OVER (PARTITION BY customer_id, member ORDER BY order_date) END.", ordered:true,
+     solution:`WITH joined AS (\n  SELECT s.customer_id, s.order_date, m.product_name, m.price,\n    CASE WHEN s.order_date >= mb.join_date THEN 'Y' ELSE 'N' END AS member\n  FROM sales AS s\n  JOIN menu AS m ON s.product_id = m.product_id\n  LEFT JOIN members AS mb ON s.customer_id = mb.customer_id\n)\nSELECT *,\n  CASE WHEN member = 'N' THEN NULL\n       ELSE RANK() OVER (PARTITION BY customer_id, member ORDER BY order_date)\n  END AS ranking\nFROM joined\nORDER BY customer_id, order_date, product_name;`}
+  ],
+  recap:"You can now join, filter, aggregate, rank and shape data for other people. On to Case Study #2."
+}
+];
+
+
+
+const CASE_QS = {
+  Q1:"What is the total amount each customer spent at the restaurant?",
+  Q2:"How many days has each customer visited the restaurant?",
+  Q3:"What was the first item from the menu purchased by each customer?",
+  Q4:"What is the most purchased item on the menu and how many times was it purchased by all customers?",
+  Q5:"Which item was the most popular for each customer?",
+  Q6:"Which item was purchased first by the customer after they became a member?",
+  Q7:"Which item was purchased just before the customer became a member?",
+  Q8:"What is the total items and amount spent for each member before they became a member?",
+  Q9:"If each $1 spent equates to 10 points and sushi has a 2x points multiplier, how many points would each customer have?",
+  Q10:"In the first week after a customer joins the program (including their join date) they earn 2x points on all items, not just sushi. How many points do customer A and B have at the end of January?",
+  "Bonus 1":"Join All The Things",
+  "Bonus 2":"Rank All The Things"
+};
+const CASE_URL = "https://8weeksqlchallenge.com/case-study-1/";
+const FOLDER = "case-study-1-dannys-diner";
+
+/* ---------- state (this browser only) ---------- */
+const STORE = "dannys-diner-sql-v1";
+const pad = n => String(n).padStart(2,"0");
+const todayISO = () => { const d = new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); };
+function blank(){ return {start: todayISO(), code:{}, passed:{}, notes:{}, done:{}, peeked:{}}; }
+let S = blank();
+try { const j = JSON.parse(localStorage.getItem(STORE)); if (j) S = Object.assign(blank(), j); } catch(e) {}
+function save(){ try { localStorage.setItem(STORE, JSON.stringify(S)); } catch(e) {} }
+save();
+
+const EX = {}; DAYS.forEach(d => d.exercises.forEach(x => { x.day = d.n; EX[x.id] = x; }));
+const dayDate = n => { const [y,m,d] = S.start.split("-").map(Number); const t = new Date(y, m-1, d + n - 1);
+  return t.toLocaleDateString(undefined, {weekday:"short", month:"short", day:"numeric"}); };
+const passedCount = d => d.exercises.filter(x => S.passed[x.id]).length;
+const dayState = d => { const p = passedCount(d); return p === d.exercises.length ? "done" : p > 0 ? "part" : ""; };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---------- SQL engine ---------- */
+let SQL = null;
+function setEngine(state, text){ document.querySelectorAll(".engine").forEach(e => { e.className = "engine" + (state === "err" ? " err" : ""); e.querySelector("span").textContent = text; }); }
+function engineText(){ return SQL ? "SQL engine ready · SQLite 3.45 in your browser" : "Loading SQL engine…"; }
+if (typeof initSqlJs === "function") {
+  initSqlJs().then(s => { SQL = s; document.body.classList.add("ready"); setEngine("ok", engineText());
+    document.querySelectorAll("[data-needs-engine]").forEach(b => b.disabled = false); })
+  .catch(() => engineFail());
+} else { setTimeout(engineFail, 0); }
+let engineBroken = false;
+function engineFail(){ engineBroken = true; setEngine("err", "The SQL engine could not load. Reload the page; you can still read lessons."); }
+
+function runSQL(sql){
+  const db = new SQL.Database();
+  try { db.exec(SCHEMA); const r = db.exec(sql); return {ok:true, res: r.length ? r[r.length-1] : null}; }
+  catch(e){ return {ok:false, err: String(e.message || e)}; }
+  finally { db.close(); }
+}
+const expectedCache = {};
+function expected(x){ if (!expectedCache[x.id]) expectedCache[x.id] = runSQL(x.solution).res; return expectedCache[x.id]; }
+
+function friendly(err){
+  const tips = [
+    [/no such column: ?([\w.]+)/i, m => `Check the spelling of <code>${esc(m[1])}</code>, and that its table is in FROM or JOIN. Columns: sales(customer_id, order_date, product_id), menu(product_id, product_name, price), members(customer_id, join_date).`],
+    [/no such table/i, () => "The tables are <code>sales</code>, <code>menu</code> and <code>members</code>."],
+    [/ambiguous column name: ?([\w.]+)/i, m => `<code>${esc(m[1])}</code> exists in more than one joined table. Prefix it with a table alias, like <code>s.${esc(m[1])}</code>.`],
+    [/misuse of window function/i, () => "Window functions cannot go in WHERE or GROUP BY. Calculate the rank in a CTE, then filter the CTE."],
+    [/misuse of aggregate/i, () => "Aggregates like COUNT or SUM cannot go in WHERE. Use HAVING to filter groups."],
+    [/incomplete input/i, () => "The query looks unfinished. Check for a missing closing bracket, quote, or END."],
+    [/syntax error/i, () => "Check commas between columns (none after the last one), quotes around text, and clause order: SELECT, FROM, JOIN, WHERE, GROUP BY, HAVING, ORDER BY, LIMIT."]
+  ];
+  for (const [re, f] of tips) { const m = err.match(re); if (m) return f(m); }
+  return "";
+}
+
+/* ---------- comparing results ---------- */
+function norm(v){
+  if (v === null || v === undefined) return "∅";
+  if (typeof v === "string" && /^-?\d+(\.\d+)?$/.test(v.trim())) v = Number(v);
+  if (typeof v === "number") return "n:" + Number(v.toFixed(6));
+  return "s:" + String(v).trim();
+}
+function compare(u, e, x){
+  if (!u) return {pass:false, msg:"Your query ran but returned no rows or columns."};
+  const ue = e.columns.length, uu = u.columns.length;
+  if (uu !== ue) return {pass:false, msg:`Your result has ${uu} column${uu===1?"":"s"}; the task asks for ${ue} (${e.columns.join(", ")}).`};
+  let cols = u.columns.map((c,i) => i);
+  const lu = u.columns.map(c => c.toLowerCase()), le = e.columns.map(c => c.toLowerCase());
+  if (le.every(c => lu.includes(c)) && new Set(lu).size === lu.length) cols = le.map(c => lu.indexOf(c));
+  if (x.checkNames && !le.every(c => lu.includes(c))) return {pass:false, msg:`The values may be right, but the columns should be named ${e.columns.join(" and ")}. Use AS to rename them.`};
+  const ur = u.values.map(r => cols.map(i => norm(r[i])).join("␟"));
+  const er = e.values.map(r => r.map(norm).join("␟"));
+  if (ur.length !== er.length) return {pass:false, msg:`You returned ${ur.length} row${ur.length===1?"":"s"}; the expected answer has ${er.length}.`};
+  const sameSet = [...ur].sort().join("\n") === [...er].sort().join("\n");
+  if (!sameSet) return {pass:false, msg:"Right shape, but some values differ from the expected answer."};
+  if (x.ordered && ur.join("\n") !== er.join("\n")) return {pass:false, msg:"Right rows, wrong order. Check your ORDER BY."};
+  return {pass:true};
+}
+
+/* ---------- rendering helpers ---------- */
+function tableHTML(res){
+  if (!res) return `<div class="msg info">Statement ran. It did not return any rows.</div>`;
+  const nums = res.columns.map((c,i) => res.values.length && res.values.every(r => r[i] === null || typeof r[i] === "number"));
+  const head = res.columns.map((c,i) => `<th${nums[i]?' style="text-align:right"':""}>${esc(c)}</th>`).join("");
+  const body = res.values.map(r => "<tr>" + r.map((v,i) => v === null ? `<td class="nul${nums[i]?" num":""}">NULL</td>` : `<td${nums[i]?' class="num"':""}>${esc(v)}</td>`).join("") + "</tr>").join("");
+  return `<div class="twrap"><table class="res"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div><div class="rc">${res.values.length} row${res.values.length===1?"":"s"}</div>`;
+}
+function runnerHTML(key, code, kind){
+  const lines = code.split("\n").length;
+  const rows = Math.max(kind === "ex" ? 5 : 3, lines + 1);
+  const dis = SQL ? "" : " disabled";
+  const btns = kind === "ex"
+    ? `<button class="btn primary" data-act="check" data-needs-engine${dis}>Run &amp; check</button><button class="btn" data-act="hint">Hint</button><button class="btn" data-act="solution">Solution</button>`
+    : `<button class="btn primary" data-act="run" data-needs-engine${dis}>Run</button><button class="btn" data-act="reset">Reset</button>`;
+  return `<div class="runner" data-key="${key}" data-kind="${kind}">
+    <textarea id="ed-${key.replace(/\W/g,"_")}" rows="${rows}" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="SQL editor">${esc(code)}</textarea>
+    <div class="tools">${btns}<span class="kbd">Ctrl/Cmd + Enter to run</span></div>
+    <div class="out"></div></div>`;
+}
+
+const TABLES = {
+  sales:{cols:["customer_id","order_date","product_id"], rows:[["A","2021-01-01",1],["A","2021-01-01",2],["A","2021-01-07",2],["A","2021-01-10",3],["A","2021-01-11",3],["A","2021-01-11",3],["B","2021-01-01",2],["B","2021-01-02",2],["B","2021-01-04",1],["B","2021-01-11",1],["B","2021-01-16",3],["B","2021-02-01",3],["C","2021-01-01",3],["C","2021-01-01",3],["C","2021-01-07",3]], note:"One row per item ordered. 15 rows."},
+  menu:{cols:["product_id","product_name","price"], rows:[[1,"sushi",10],[2,"curry",15],[3,"ramen",12]], note:"Prices in US dollars."},
+  members:{cols:["customer_id","join_date"], rows:[["A","2021-01-07"],["B","2021-01-09"]], note:"Customer C never joined."}
+};
+function tablesHTML(open){
+  const t = Object.entries(TABLES).map(([name,t]) => `<div><h5>${name}</h5>${tableHTML({columns:t.cols, values:t.rows})}<p>${t.note}</p></div>`).join("");
+  return `<details class="tables"${open?" open":""}><summary>The data: sales, menu, members</summary><div class="tgrid">${t}</div></details>`;
+}
+const engineChip = () => `<div class="engine${engineBroken?" err":""}"><i></i><span>${engineBroken ? "The SQL engine could not load. Reload the page; you can still read lessons." : engineText()}</span></div>`;
+
+/* ---------- rail ---------- */
+function renderRail(cur){
+  const doneDays = DAYS.filter(d => dayState(d) === "done").length;
+  const qs = Object.keys(CASE_QS).filter(q => /^Q/.test(q));
+  const solved = qs.filter(q => DAYS.some(d => d.exercises.some(x => x.caseQ === q && S.passed[x.id]))).length;
+  const weeks = [1,2,3].map(w => `<div class="wk"><h4>Week ${w}</h4><ol>${DAYS.filter(d => d.week === w).map(d => {
+    const st = dayState(d);
+    return `<li><a class="dlink${cur === "day-"+d.n ? " cur" : ""}${st === "done" ? " done-d" : ""}" href="#day-${d.n}" title="Day ${d.n}: ${esc(d.title)}"><span class="dnum">${d.n}</span><span class="dname">${esc(d.title)}</span><span class="dot ${st}"></span></a></li>`;
+  }).join("")}</ol></div>`).join("");
+  document.getElementById("rail").innerHTML = `
+    <div class="brand"><b>Danny's Diner SQL</b><span>15 days · Case Study #1</span></div>
+    <div class="meter"><div><strong>${doneDays}</strong> of 15 days complete</div><div class="bar"><i style="width:${doneDays/15*100}%"></i></div>
+      <div><strong>${solved}</strong> of 10 case study questions solved</div></div>
+    <nav class="weeks" aria-label="Course days">${weeks}</nav>
+    <div class="extra"><a class="dlink${cur==="sandbox"?" cur":""}" href="#sandbox"><span class="dname">Sandbox</span></a><a class="dlink${cur==="github"?" cur":""}" href="#github"><span class="dname">GitHub setup</span></a></div>`;
+}
+
+/* ---------- day page ---------- */
+function renderDay(n){
+  const d = DAYS[n-1];
+  const st = dayState(d);
+  const lesson = d.lesson.map((c,i) => `<div class="concept"><h3>${c.h}</h3><div class="prose">${c.body}</div>${c.example ? runnerHTML(`L${n}-${i}`, c.example, "lesson") : ""}</div>`).join("");
+  const exs = d.exercises.map(x => {
+    const code = S.code[x.id] ?? "-- Write your query here\n";
+    return `<div class="ex${S.passed[x.id] ? " passed" : ""}" data-ex="${x.id}"><div class="exhead"><span class="exid">${x.id}</span><p>${x.prompt}</p></div>
+      ${runnerHTML(x.id, code, "ex")}
+      <div class="hint" hidden><span class="lbl">Hint</span><br>${x.hint}</div>
+      <div class="sol" hidden></div></div>`;
+  }).join("");
+  const chips = (d.caseQs||[]).map(q => {
+    const done = d.exercises.some(x => x.caseQ === q && S.passed[x.id]);
+    return `<span class="chip${done ? " done" : ""}">Case ${q}${done ? " solved" : ""}</span>`; }).join("");
+  document.getElementById("main").innerHTML = `
+    ${engineChip()}
+    <header class="dayhead">
+      <div class="eyebrow"><span>Week ${d.week} · Day ${d.n} of 15</span><span>About ${d.minutes} min</span><span>Planned: ${dayDate(d.n)}</span></div>
+      <h1>${d.title}</h1>
+      <p class="goal">${d.goal}</p>
+      ${chips ? `<div class="chips">${chips}</div>` : ""}
+    </header>
+    ${tablesHTML(n === 1)}
+    <section class="block"><div class="sechead"><h2>Learn</h2><span>${d.topic}</span></div>${lesson}</section>
+    <section class="block"><div class="sechead"><h2>Practice</h2><span id="pcount">${passedCount(d)} of ${d.exercises.length} passed</span></div>
+      <div id="donebanner">${st === "done" ? doneBanner(d) : ""}</div>${exs}</section>
+    <p class="recap"><span class="lbl">Today in one line</span><br>${d.recap}</p>
+    ${ghPanel(d)}
+    <div class="nav">${n > 1 ? `<a class="btn" href="#day-${n-1}">Day ${n-1}</a>` : "<span></span>"}${n < 15 ? `<a class="btn primary" href="#day-${n+1}">Day ${n+1}: ${esc(DAYS[n].title)}</a>` : `<a class="btn primary" href="https://8weeksqlchallenge.com/case-study-2/" target="_blank" rel="noopener">Next: Case Study #2</a>`}</div>`;
+  autosizeAll();
+}
+const doneBanner = d => `<div class="donebanner">Day ${d.n} complete${S.done[d.n] ? " on " + S.done[d.n] : ""}. Write your takeaway below, then save today's file to GitHub.</div>`;
+
+/* ---------- GitHub export ---------- */
+const filePath = d => `${FOLDER}/day-${pad(d.n)}-${d.slug}.md`;
+const commitMsg = d => `Day ${d.n}: ${d.topic} (Danny's Diner)`;
+function plain(html){
+  return html.replace(/<code>(.*?)<\/code>/g, "`$1`").replace(/<\/?strong>/g, "**").replace(/<[^>]+>/g, "")
+    .replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&amp;/g,"&").replace(/&rarr;/g,"->").replace(/&quot;/g,'"');
+}
+function mdTable(res){
+  if (!res) return "_No rows returned._";
+  const cell = v => v === null ? "NULL" : String(v).replace(/\|/g,"\\|");
+  return [`| ${res.columns.join(" | ")} |`, `| ${res.columns.map(() => "---").join(" | ")} |`, ...res.values.map(r => `| ${r.map(cell).join(" | ")} |`)].join("\n");
+}
+function dayMarkdown(d){
+  const out = [`# Day ${d.n}: ${d.title}`, "",
+    `**Topic:** ${d.topic}  `,
+    `**Case study:** [8 Week SQL Challenge, Case Study #1: Danny's Diner](${CASE_URL})  `,
+    S.done[d.n] ? `**Completed:** ${S.done[d.n]}  ` : `**Status:** in progress  `,
+    `**Engine:** SQLite (the original case study uses PostgreSQL; queries are standard SQL unless noted)`, ""];
+  if (d.caseQs) out.push(`Case study questions answered today: ${d.caseQs.join(", ")}`, "");
+  d.exercises.forEach(x => {
+    const code = (S.code[x.id] || "").trim();
+    if (!code || code === "-- Write your query here") return;
+    out.push(`## ${x.id}${x.caseQ ? " (" + x.caseQ + ")" : ""}`, "", plain(x.prompt), "", "```sql", code, "```", "");
+    if (SQL) { const r = runSQL(code); out.push(r.ok ? mdTable(r.res) : "_Query error: " + r.err + "_", ""); }
+    out.push(S.passed[x.id] ? "Result: matches the expected answer." : "Result: still working on this one.", "");
+  });
+  const notes = (S.notes[d.n] || "").trim();
+  out.push("## What I learned", "", notes || "_Add today's takeaway._", "");
+  return out.join("\n");
+}
+function readme(){
+  const lines = ["# SQL Practice Log", "",
+    "Daily SQL practice working through the [8 Week SQL Challenge](https://8weeksqlchallenge.com/) by Danny Ma. Each file holds my queries, their results, and what I learned that day.", "",
+    "## Case Study #1: Danny's Diner", "",
+    `[Case study brief](${CASE_URL})`, ""];
+  const doneDays = DAYS.filter(d => dayState(d) === "done").length;
+  const qsDone = Object.keys(CASE_QS).filter(q => DAYS.some(d => d.exercises.some(x => x.caseQ === q && S.passed[x.id])));
+  lines.push(`**Progress:** ${doneDays} of 15 days complete · ${qsDone.filter(q => /^Q/.test(q)).length} of 10 case study questions solved`, "",
+    "| Day | Topic | Status |", "| --- | --- | --- |");
+  DAYS.forEach(d => {
+    const st = dayState(d);
+    const name = st ? `[Day ${d.n}: ${d.title}](${filePath(d)})` : `Day ${d.n}: ${d.title}`;
+    lines.push(`| ${name} | ${d.topic} | ${st === "done" ? "Done" + (S.done[d.n] ? " " + S.done[d.n] : "") : st === "part" ? "In progress" : "Not started"} |`);
+  });
+  lines.push("", "### Case study questions", "", "| # | Question | Solved in |", "| --- | --- | --- |");
+  Object.entries(CASE_QS).forEach(([q,text]) => {
+    const x = Object.values(EX).find(x => x.caseQ === q);
+    const d = DAYS[x.day-1];
+    lines.push(`| ${q} | ${text} | ${S.passed[x.id] ? `[Day ${d.n}](${filePath(d)})` : "Not yet"} |`);
+  });
+  const skills = DAYS.filter(d => dayState(d)).map(d => d.topic).join(", ");
+  if (skills) lines.push("", "## SQL skills practised", "", skills);
+  lines.push("");
+  return lines.join("\n");
+}
+function ghPanel(d){
+  const p = passedCount(d);
+  return `<section class="gh" id="gh">
+    <div class="sechead" style="border:0;padding:0"><h2>Save today to GitHub</h2></div>
+    <label class="lbl" for="notes-${d.n}">What I learned today</label>
+    <textarea class="notes" id="notes-${d.n}" data-notes="${d.n}" placeholder="In 2 or 3 plain sentences: what did the data tell you about Danny's customers, and which SQL idea clicked?">${esc(S.notes[d.n] || "")}</textarea>
+    <p class="note" style="margin:0">${p ? `Your file will include ${p} passed exercise${p===1?"":"s"}, with your queries and results.` : "Pass at least one exercise and your queries will appear in today's file."} Progress is stored in this browser only, so GitHub is your permanent record.</p>
+    <div class="ghrow"><span class="lbl">File name</span><code>${filePath(d)}</code><button class="btn" data-copy="path">Copy</button></div>
+    <div class="ghrow"><span class="lbl">Commit message</span><code>${esc(commitMsg(d))}</code><button class="btn" data-copy="msg">Copy</button></div>
+    <div class="ghbtns"><button class="btn primary" data-copy="file">Copy day file</button><button class="btn" data-copy="readme">Copy README</button><a href="#github">How to commit these</a></div>
+    <div class="fbslot"></div>
+    <details data-preview="${d.n}"><summary>Preview day file</summary><pre></pre></details>
+  </section>`;
+}
+async function copyText(text, btn){
+  const slot = btn.closest(".gh")?.querySelector(".fbslot");
+  try { await navigator.clipboard.writeText(text); const o = btn.textContent; btn.textContent = "Copied"; setTimeout(() => btn.textContent = o, 1400); if (slot) slot.innerHTML = ""; }
+  catch(e){ if (slot) { slot.innerHTML = `<p class="note">Copy is blocked here. Select all the text below and copy it.</p><textarea class="fallback" readonly>${esc(text)}</textarea>`; const t = slot.querySelector("textarea"); t.focus(); t.select(); } }
+}
+
+/* ---------- sandbox and guide ---------- */
+function renderSandbox(){
+  document.getElementById("main").innerHTML = `${engineChip()}
+    <header class="dayhead"><div class="eyebrow"><span>Free practice</span></div><h1>Sandbox</h1>
+    <p class="goal">Try anything. The data resets every time you run, so you cannot break it.</p></header>
+    ${tablesHTML(true)}
+    ${runnerHTML("sandbox", S.code.sandbox ?? "SELECT *\nFROM sales\nLIMIT 5;", "lesson")}`;
+  autosizeAll();
+}
+function renderGuide(){
+  document.getElementById("main").innerHTML = `
+    <header class="dayhead"><div class="eyebrow"><span>Show your work</span></div><h1>GitHub setup</h1>
+    <p class="goal">One repository, one file per day. Each daily commit adds a square to your contribution graph, and each file shows a reviewer how you think through data.</p></header>
+    <section class="block guide"><h2>Once, before Day 1 (about 5 minutes)</h2><ol>
+      <li>Sign in at <a href="https://github.com" target="_blank" rel="noopener">github.com</a>, or create a free account.</li>
+      <li>Click <strong>+</strong> (top right), then <strong>New repository</strong>. Name it <code>sql-practice</code>, set it to <strong>Public</strong>, tick <strong>Add a README file</strong>, and click <strong>Create repository</strong>.</li>
+      <li>On your profile page, click <strong>Customize your pins</strong> and pin <code>sql-practice</code> so visitors see it first.</li></ol></section>
+    <section class="block guide"><h2>Every day (about 3 minutes)</h2><ol>
+      <li>Finish the day's exercises and write 2 or 3 sentences in <strong>What I learned today</strong>.</li>
+      <li>In your repository, click <strong>Add file</strong>, then <strong>Create new file</strong>. Click <strong>Copy</strong> next to the file name in this course and paste it into the name box. The slash creates the folder for you.</li>
+      <li>Click <strong>Copy day file</strong> and paste into the large editor.</li>
+      <li>Click <strong>Commit changes</strong>, paste the commit message, keep <strong>Commit directly to the main branch</strong>, and confirm.</li>
+      <li>Open <code>README.md</code>, click the pencil icon, select all, paste <strong>Copy README</strong>, and commit. Your progress table and solved questions update.</li></ol></section>
+    <section class="block guide"><h2>Make it count</h2><ol>
+      <li>Commit on the day you practise. Commits made in GitHub's web editor count toward your contribution graph automatically.</li>
+      <li>Your takeaway matters more than the query. "Customer B spreads orders evenly across all three dishes, so B is the best test audience for a new item" shows product thinking; hiring managers look for that.</li>
+      <li>Missed a day? Do it the next day. A steady record beats a perfect one.</li>
+      <li>The generated files link back to Danny's case study page, which he asks for when you share your work.</li></ol></section>
+    <p class="note">If you edit a day after committing, copy the day file again and replace the file's contents on GitHub with the pencil icon.</p>`;
+}
+
+/* ---------- routing ---------- */
+function route(){
+  const h = location.hash.slice(1);
+  let cur;
+  if (h === "sandbox") { renderSandbox(); cur = h; }
+  else if (h === "github") { renderGuide(); cur = h; }
+  else {
+    let n = parseInt((h.match(/^day-(\d+)$/) || [])[1]);
+    if (!(n >= 1 && n <= 15)) { const next = DAYS.find(d => dayState(d) !== "done"); n = next ? next.n : 15; }
+    renderDay(n); cur = "day-" + n;
+  }
+  renderRail(cur);
+  window.scrollTo(0, 0);
+}
+window.addEventListener("hashchange", route);
+
+/* ---------- interactions ---------- */
+function autosize(t){ t.style.height = "auto"; t.style.height = (t.scrollHeight + 2) + "px"; }
+function autosizeAll(){ document.querySelectorAll(".runner textarea").forEach(autosize); }
+const main = document.getElementById("main");
+
+function curDay(){ const m = location.hash.match(/^#day-(\d+)$/); return m ? DAYS[+m[1]-1] : DAYS.find(d => dayState(d) !== "done") || DAYS[14]; }
+
+function doRun(runner){
+  if (!SQL) return;
+  const code = runner.querySelector("textarea").value;
+  const out = runner.querySelector(".out");
+  const r = runSQL(code);
+  out.innerHTML = r.ok ? tableHTML(r.res) : `<div class="msg no">${esc(r.err)}<small>${friendly(r.err)}</small></div>`;
+}
+function doCheck(runner){
+  if (!SQL) return;
+  const id = runner.dataset.key, x = EX[id];
+  const code = runner.querySelector("textarea").value;
+  const out = runner.querySelector(".out");
+  const r = runSQL(code);
+  if (!r.ok) { out.innerHTML = `<div class="msg no">${esc(r.err)}<small>${friendly(r.err)}</small></div>`; return; }
+  const c = compare(r.res, expected(x), x);
+  if (c.pass) {
+    const first = !S.passed[id];
+    S.passed[id] = S.passed[id] || todayISO();
+    const d = DAYS[x.day-1];
+    if (dayState(d) === "done" && !S.done[d.n]) S.done[d.n] = todayISO();
+    save();
+    out.innerHTML = `<div class="msg ok">Correct${x.caseQ ? `. You solved case study ${x.caseQ}` : ""}.${first && S.peeked[id] ? "<small>Try it again tomorrow without the solution to lock it in.</small>" : ""}</div>` + tableHTML(r.res);
+    runner.closest(".ex").classList.add("passed");
+    document.getElementById("pcount").textContent = `${passedCount(d)} of ${d.exercises.length} passed`;
+    if (dayState(d) === "done") document.getElementById("donebanner").innerHTML = doneBanner(d);
+    renderRail("day-" + d.n);
+  } else {
+    out.innerHTML = `<div class="msg no">Not yet. ${c.msg}</div>${tableHTML(r.res)}<div><button class="btn" data-act="expected">Show expected result</button></div><div class="expwrap"></div>`;
+  }
+}
+
+main.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const runner = b.closest(".runner");
+  const act = b.dataset.act;
+  if (act === "run") doRun(runner);
+  else if (act === "check") doCheck(runner);
+  else if (act === "reset") {
+    const key = runner.dataset.key;
+    let orig = "";
+    if (key === "sandbox") { orig = "SELECT *\nFROM sales\nLIMIT 5;"; delete S.code.sandbox; save(); }
+    else { const [, n, i] = key.match(/^L(\d+)-(\d+)$/); orig = DAYS[n-1].lesson[i].example; }
+    const t = runner.querySelector("textarea"); t.value = orig; autosize(t); runner.querySelector(".out").innerHTML = "";
+  }
+  else if (act === "hint") { const h = b.closest(".ex").querySelector(".hint"); h.hidden = !h.hidden; }
+  else if (act === "solution") {
+    const ex = b.closest(".ex"), x = EX[ex.dataset.ex], sol = ex.querySelector(".sol");
+    if (!sol.hidden) { sol.hidden = true; return; }
+    sol.innerHTML = `<span class="lbl">One possible solution</span><pre>${esc(x.solution)}</pre><p class="note" style="margin:8px 0 0">Read it, close it, then type your own version from memory. Typing it yourself is what makes it stick.</p>`;
+    sol.hidden = false; S.peeked[x.id] = true; save();
+  }
+  else if (act === "expected") {
+    const x = EX[runner.dataset.key]; const w = runner.querySelector(".expwrap");
+    w.innerHTML = w.innerHTML ? "" : `<span class="lbl">Expected result</span>${tableHTML(expected(x))}`;
+  }
+  else if (b.dataset.copy) {
+    const d = curDay(); const k = b.dataset.copy;
+    copyText(k === "path" ? filePath(d) : k === "msg" ? commitMsg(d) : k === "file" ? dayMarkdown(d) : readme(), b);
+  }
+});
+let saveTimer;
+main.addEventListener("input", e => {
+  const t = e.target;
+  if (t.matches(".runner textarea")) {
+    autosize(t);
+    const r = t.closest(".runner");
+    if (r.dataset.kind === "ex" || r.dataset.key === "sandbox") { S.code[r.dataset.key] = t.value; clearTimeout(saveTimer); saveTimer = setTimeout(save, 300); }
+  } else if (t.dataset.notes) { S.notes[t.dataset.notes] = t.value; clearTimeout(saveTimer); saveTimer = setTimeout(save, 300); }
+});
+main.addEventListener("keydown", e => {
+  const t = e.target; if (!t.matches(".runner textarea")) return;
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); const r = t.closest(".runner"); r.dataset.kind === "ex" ? doCheck(r) : doRun(r); }
+  else if (e.key === "Tab" && !e.shiftKey) { e.preventDefault(); const s = t.selectionStart; t.setRangeText("  ", s, t.selectionEnd, "end"); t.dispatchEvent(new Event("input", {bubbles:true})); }
+});
+main.addEventListener("toggle", e => {
+  const det = e.target; if (det.dataset && det.dataset.preview && det.open) det.querySelector("pre").textContent = dayMarkdown(DAYS[+det.dataset.preview - 1]);
+}, true);
+
+route();
+</script>
+
+</body></html>
