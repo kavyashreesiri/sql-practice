@@ -10,7 +10,7 @@ Daily SQL practice working through the [8 Week SQL Challenge](https://8weeksqlch
 
 | Day | Topic | Status |
 | --- | --- | --- |
-| [Day 1: Meet the data](case-study-1-dannys-diner/day-01-select.md) | SELECT, columns, LIMIT | Done 2026-10-28 |
+| [Day 1: Meet the data](case-study-1-dannys-diner/day-01-select.md) | SELECT chooses columns, FROM chooses the table, LIMIT caps the rows. | Done 2026-10-28 |
 | Day 2: Filter rows with WHERE | WHERE, AND, OR, IN | Not started |
 | Day 3: Sort, dedupe and rename | ORDER BY, DISTINCT, AS | Not started |
 | Day 4: Count, sum and average | COUNT, SUM, MIN, MAX, AVG | Not started |
