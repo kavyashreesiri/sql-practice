@@ -116,3 +116,4 @@ Result: matches the expected answer.
 ## What I learned
 
 ORDER BY for order, DISTINCT for unique rows, AS for clear names.
+Understanding insights like customer visit frequency
