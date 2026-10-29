@@ -71,7 +71,7 @@ WHERE customer_id='C'
 Result: matches the expected answer.
 
 ## What I learned
-
+Day 4: COUNT, SUM, MIN, MAX, AVG (Danny's Diner)
 Aggregates turn many rows into one. COUNT(DISTINCT) counts unique values.
 
 Average menu price, scope for increasing or decreasing menu item price.
