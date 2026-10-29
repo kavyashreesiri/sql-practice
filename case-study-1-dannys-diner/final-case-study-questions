@@ -25,6 +25,11 @@ FROM sales;
 -- Write your query here
 SELECT ROUND(AVG(price), 2) AS avg_price
 FROM menu;
+-- 13. How many times each product was ordered?
+SELECT product_id as product,COUNT(product_id) as times_ordered
+from sales
+group by product_id
+order by product 
 
 -- Example Query:
 SELECT
